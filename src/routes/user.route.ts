@@ -1,18 +1,13 @@
-import { Router } from 'express';
-import { createUser, loginUser, logoutUser } from '../controllers';
-import {
-    isTokenBlacklisted
-} from '../middlewares';
+import express from 'express';
+import * as userController from '../controllers';
+import { protect, admin } from '../middlewares';
 
-const router = Router();
+const router = express.Router();
 
-router.post('/signup', async (req, res) => {
-    await createUser(req, res);
-});
-router.post('/login', async (req, res) => {
-    await loginUser(req, res);
-});
+router.post('/', protect, admin, userController.createUser);
+router.get('/', protect, userController.getUsers);
+router.get('/:id', protect, userController.getUser);
+router.put('/:id', protect, userController.updateUser);
+router.delete('/:id', protect, admin, userController.deleteUser);
 
-router.post('/logout', isTokenBlacklisted, logoutUser);
-
-export const userRoutes = router;
+export default router;

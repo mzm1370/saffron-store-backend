@@ -1,76 +1,65 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { Request, Response } from 'express';
-import {
-    User
-} from '../models';
+import * as userService from '../services';
+import { handleError } from '../utils';
 
-const tokenBlacklist: string[] = [];
-
-export const createUser = async (req: Request, res: Response): Promise<Response | void> => {
-    const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
-        return res.status(400).json({ error: 'Please provide name, email, and password' });
-    }
-
+// Create a new user (Admin use case, or extend as needed)
+export const createUser = async (req: Request, res: Response): Promise<void> => {
     try {
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ error: 'Email is already registered' });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        await User.create({ name, email, password: hashedPassword });
-
-        return res.status(201).json({ message: 'User created successfully' });
+        const user = await userService.createUser(req.body);
+        res.status(201).json(user);
     } catch (error) {
-        return res.status(500).json({ error: 'Server error' });
+        handleError(res, error);
     }
 };
 
-
-export const loginUser = async (req: Request, res: Response): Promise<Response | void> => {
-    const { email, password } = req.body;
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Please provide email and password' });
-    }
-
+// Get all users
+export const getUsers = async (_req: Request, res: Response): Promise<void> => {
     try {
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(400).json({ error: 'Invalid email or password' });
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ error: 'Invalid email or password' });
-        }
-
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET!, { expiresIn: '1h' });
-
-        return res.status(200).json({ token });
+        const users = await userService.getAllUsers();
+        res.status(200).json(users);
     } catch (error) {
-        console.error('Login error:', error);
-        return res.status(500).json({ error: 'Server error' });
+        handleError(res, error);
     }
 };
 
-
-export const logoutUser = (req: Request, res: Response): void => {
-    const token = req.headers.authorization?.split(' ')[1];
-
-    if (!token) {
-        res.status(400).json({ error: 'No token provided' });
-    } else {
-        try {
-            jwt.verify(token, process.env.JWT_SECRET!);
-
-            tokenBlacklist.push(token);
-
-            res.status(200).json({ message: 'User logged out successfully' });
-        } catch (error) {
-            res.status(400).json({ error: 'Invalid token' });
+// Get a single user by ID
+export const getUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = await userService.getUserById(req.params.id);
+        if (user) {
+            res.status(200).json(user);
+        } else {
+            res.status(404).json({ message: 'User not found' });
         }
+    } catch (error) {
+        handleError(res, error);
+    }
+};
+
+// Update a user by ID
+export const updateUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const updatedUser = await userService.updateUser(req.params.id, req.body);
+        if (updatedUser) {
+            res.status(200).json(updatedUser);
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        handleError(res, error);
+    }
+};
+
+// Delete a user by ID
+export const deleteUser = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const deletedUser = await userService.deleteUser(req.params.id);
+        if (deletedUser) {
+            res.status(200).json({ message: 'User deleted successfully' });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        handleError(res, error);
     }
 };
