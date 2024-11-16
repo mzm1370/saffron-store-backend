@@ -10,4 +10,5 @@ router.get('/:id', protect, userController.getUser);
 router.put('/:id', protect, userController.updateUser);
 router.delete('/:id', protect, admin, userController.deleteUser);
 
-export default router;
+export const userRoutes = router;
+
